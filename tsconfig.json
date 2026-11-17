@@ -39,7 +39,11 @@
     ".next-local/types/**/*.ts",
     ".next-local/dev/types/**/*.ts",
     ".next-e2e/types/**/*.ts",
-    ".next-e2e/dev/types/**/*.ts"
+    ".next-e2e/dev/types/**/*.ts",
+    ".next-live-cv-smoke/types/**/*.ts",
+    ".next-live-cv-smoke/dev/types/**/*.ts",
+    ".next-local-login/types/**/*.ts",
+    ".next-local-login/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

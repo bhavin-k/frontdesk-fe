@@ -192,16 +192,9 @@ function BusinessWorkspace({
                   <h3>{opening.title}</h3>
                   <span className="badge">{statusLabel(opening.status)}</span>
                   <p className="preserve-lines">{opening.job_description}</p>
-                  <ul>
-                    {opening.criteria.map((criterion) => (
-                      <li key={criterion.id}>
-                        {criterion.text}
-                        {criterion.required && (
-                          <span className="muted"> · {copy.required}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  {opening.details.candidate_requirements && (
+                    <p className="preserve-lines">{opening.details.candidate_requirements}</p>
+                  )}
                 </div>
               ) : (
                 <OpeningForm

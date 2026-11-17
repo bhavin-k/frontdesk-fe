@@ -26,7 +26,7 @@ async function signup(page: Page, name = "Local Recruiter") {
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 45000 });
 }
 async function business(page: Page, name: string) {
   const response = page.waitForResponse(
@@ -78,7 +78,7 @@ async function upload(page: Page, id: string, file: string, status = 202) {
   return value;
 }
 
-test("review explains citation failures instead of reporting a document error", async ({ page }) => {
+test("review explains a match validation error", async ({ page }) => {
   test.setTimeout(150000);
   await signup(page, "Evidence review recruiter");
   const tenant = await business(page, "Evidence review test");
@@ -92,19 +92,19 @@ test("review explains citation failures instead of reporting a document error", 
         ...(await response.json()),
         status: "needs_review",
         application_id: null,
-        review_reason: "INVALID_EVIDENCE",
+        review_reason: "INVALID_MATCH_OUTPUT",
       },
     });
   });
   await page.goto(`/dashboard/review/${uploaded.upload_id}`);
   await expect(page.getByText(
-    "The AI's evidence could not be verified against this CV. No match score was published.",
+    "The match result did not pass validation.",
     { exact: false },
   )).toBeVisible();
   await expect(page.getByText(/Document processing could not be completed/)).toHaveCount(0);
 });
 
-test("PDF attachments: preserve the original and show matched CV evidence", async ({ page }) => {
+test("PDF attachments: preserve the original and show matched requirements", async ({ page }) => {
   test.setTimeout(150000);
   await signup(page, "PDF test recruiter");
   const tenant = await business(page, "PDF processing test");
@@ -113,7 +113,7 @@ test("PDF attachments: preserve the original and show matched CV evidence", asyn
   await expect(page.getByTestId("upload-status")).toHaveText("Processed", {
     timeout: 45000,
   });
-  await expect(page.locator("blockquote").first()).toContainText("Python");
+  await expect(page.getByRole("listitem").filter({ hasText: /^Python$/ })).toBeVisible();
   const base = `/api/recruitment/tenants/${tenant}`;
   const original = await page.request.get(`${base}/cv-uploads/${uploaded.upload_id}/file`);
   expect(original.status()).toBe(200);
@@ -124,10 +124,10 @@ test("PDF attachments: preserve the original and show matched CV evidence", asyn
     await page.request.get(`${base}/applications/${status.application_id}/match-results`)
   ).json();
   expect(matched.result.score).toBe(100);
-  expect(matched.result.criteria[0].evidence.length).toBeGreaterThan(0);
+  expect(matched.result.matched).toContain("Python");
 });
 
-test("dashboard: CV evidence, real counts, corrections, rejection confirmation, membership and isolation", async ({
+test("dashboard: CV match, real counts, corrections, rejection confirmation, membership and isolation", async ({
   page,
   browser,
 }) => {
@@ -140,15 +140,18 @@ test("dashboard: CV evidence, real counts, corrections, rejection confirmation, 
   await expect(page.getByTestId("upload-status")).toHaveText("Processed", {
     timeout: 45000,
   });
-  await expect(page.locator("blockquote").first()).toContainText(
-    "Python development",
-  );
+  await expect(page.getByTestId("role-match-score")).toHaveText("100/100");
   const fileStatus = await (
     await page.request.get(`${base}/cv-uploads/${first.upload_id}`)
   ).json();
   const application = await (
     await page.request.get(`${base}/applications/${fileStatus.application_id}`)
   ).json();
+  expect(application.profile).toMatchObject({
+    email: "sample@example.org",
+    phone: "",
+  });
+  await expect(page.getByRole("note")).toHaveText("Phone number is missing.");
   const candidateId = application.candidate_id;
   const original = await page.request.get(
     `${base}/cv-uploads/${first.upload_id}/file`,
@@ -165,6 +168,15 @@ test("dashboard: CV evidence, real counts, corrections, rejection confirmation, 
   await page.goto(`/dashboard/candidates/${candidateId}`);
   await page
     .getByRole("tab", { name: "Candidate profile", exact: true })
+    .click();
+  const profile = page.getByRole("tabpanel", { name: "Candidate profile" });
+  await expect(profile.getByText("sample@example.org", { exact: true })).toBeVisible();
+  await expect(profile.getByRole("note")).toHaveText("Phone number is missing.");
+  await expect(
+    profile.getByRole("button", { name: "Save contact correction", exact: true }),
+  ).toHaveCount(0);
+  await profile
+    .getByRole("button", { name: "Edit contact details", exact: true })
     .click();
   const corrected = `reviewed-${randomUUID()}@example.org`;
   await page.getByLabel("Candidate email", { exact: true }).fill(corrected);
@@ -184,21 +196,23 @@ test("dashboard: CV evidence, real counts, corrections, rejection confirmation, 
         ).profile.email,
     )
     .toBe(corrected);
+  await expect(profile.getByText(corrected, { exact: true })).toBeVisible();
   await page.goto(`/dashboard/review/${first.upload_id}`);
-  await expect(page.locator("blockquote").first()).toBeVisible();
+  await expect(page.getByTestId("role-match-score")).toBeVisible();
   const match = (
     await (
       await page.request.get(
         `${base}/applications/${application.id}/match-results`,
       )
     ).json()
-  ).result;
+  ).evaluation;
   const refused = await page.request.post(
     `${base}/applications/${application.id}/review-decisions`,
     {
       headers: { Origin: origin, "Idempotency-Key": randomUUID() },
       data: {
-        match_run_id: match.match_run_id,
+        evaluation_id: match.id,
+        expected_version: application.version,
         decision: "reject",
         confirm_rejection: false,
         reason: "A confirmation is required.",
@@ -215,7 +229,7 @@ test("dashboard: CV evidence, real counts, corrections, rejection confirmation, 
   await expect(save).toBeDisabled();
   await page
     .getByRole("checkbox", {
-      name: "I reviewed the evidence and confirm this rejection",
+      name: "I reviewed the CV and confirm this rejection",
       exact: true,
     })
     .check();

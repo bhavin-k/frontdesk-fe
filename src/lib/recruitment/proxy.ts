@@ -13,7 +13,6 @@ const rules = [
   ["GET", `${tenant}/openings/${uuid}`],
   ["PATCH", `${tenant}/openings/${uuid}`],
   ["POST", `${tenant}/openings/${uuid}/actions`],
-  ["POST", `${tenant}/openings/${uuid}/criteria/retry`],
   ["GET", `${tenant}/openings/${uuid}/documents`],
   ["POST", `${tenant}/openings/${uuid}/documents`],
   ["GET", `${tenant}/openings/${uuid}/documents/${uuid}/file`],

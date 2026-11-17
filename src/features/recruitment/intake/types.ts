@@ -42,7 +42,8 @@ export type Candidate = {
   profile: {
     name: string | null;
     email: string | null;
-    mobile: string | null;
+    phone?: string | null;
+    mobile?: string | null;
     [key: string]: unknown;
   };
   contact_history?: {

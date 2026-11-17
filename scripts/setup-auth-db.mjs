@@ -35,7 +35,7 @@ const exists = spawnSync("docker", ["container", "inspect", name], { stdio: "ign
 if (!exists) {
   run("docker", ["run", "-d", "--name", name, "-p", `127.0.0.1:${port}:5432`,
     "-e", "POSTGRES_PASSWORD", "-e", `POSTGRES_DB=${dbName}`,
-    "pgvector/pgvector@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f"],
+    "postgres:16.15-bookworm@sha256:5264710be20f409750ac6dc4e5706dcef929c87e241605463f0f9aefa932a8d9"],
   { env: { ...process.env, POSTGRES_PASSWORD: state.admin } });
 } else {
   run("docker", ["start", name]);
@@ -53,7 +53,7 @@ const migrationEnv = {
 for (const role of ["auth", "api", "worker", "dispatcher"]) {
   migrationEnv[`RECRUITMENT_DB_${role.toUpperCase()}_PASSWORD`] = state[role];
 }
-run(python, ["-m", "alembic", "upgrade", "head"], { cwd: backend, env: migrationEnv });
+run(python, ["scripts/migrate.py", "upgrade"], { cwd: backend, env: migrationEnv });
 const authURL = `postgresql://recruitment_auth:${state.auth}@127.0.0.1:${port}/${dbName}`;
 const apiURL = `postgresql://recruitment_api:${state.api}@127.0.0.1:${port}/${dbName}`;
 if (!existsSync(envFile)) {

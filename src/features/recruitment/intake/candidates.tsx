@@ -59,7 +59,11 @@ function ContactForm({
               maxLength={
                 field === "email" ? 320 : field === "mobile" ? 40 : 200
               }
-              defaultValue={candidate.profile[field] ?? ""}
+              defaultValue={
+                (field === "mobile"
+                  ? candidate.profile.phone ?? candidate.profile.mobile
+                  : candidate.profile[field]) ?? ""
+              }
             />
           </div>
         ))}

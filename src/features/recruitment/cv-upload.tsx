@@ -64,7 +64,7 @@ export function CVUpload({
               id="cv-file"
               name="file"
               type="file"
-              accept=".pdf,.docx,.doc,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept=".pdf,.docx,.doc,.jpeg,.jpg,.png,image/jpeg,image/png"
               required
               onChange={() => {
                 key.current = null;

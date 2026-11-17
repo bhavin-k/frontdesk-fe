@@ -5,12 +5,15 @@ import { frontendRoot, locateBackend } from "./backend-location.mjs";
 
 const { backend, python } = locateBackend();
 const worker = process.argv.includes("worker");
-const scoringStrategy = process.env.RECRUITMENT_E2E_SCORING_STRATEGY ?? "rag";
-if (scoringStrategy !== "rag" && scoringStrategy !== "full_text") {
-  throw new Error("Choose rag or full_text for the browser test stack.");
-}
-
 const state = JSON.parse(readFileSync(resolve(frontendRoot, ".local/auth-db-test.json"), "utf8"));
+const database = new URL(
+  process.env.RECRUITMENT_AUTH_TEST_DATABASE_URL ??
+  "postgresql://127.0.0.1:55440/recruitment_auth_test",
+);
+if (database.pathname !== "/recruitment_auth_test" ||
+    !["127.0.0.1", "localhost"].includes(database.hostname)) {
+  throw new Error("The browser test stack requires the local recruitment_auth_test database.");
+}
 const env = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("RECRUITMENT_")),
 );
@@ -20,13 +23,12 @@ Object.assign(env, {
   RECRUITMENT_MAILBOX_PROVIDER_MODE: "fake",
   RECRUITMENT_PUBLIC_APP_URL: "http://localhost:3102",
   RECRUITMENT_AUTO_DELETE_ENABLED: "false",
-  RECRUITMENT_SCORING_STRATEGY: scoringStrategy,
   RECRUITMENT_WORKER_POLL_SECONDS: "0.2",
   RECRUITMENT_ENABLED_MAILBOX_METHODS: "imap,gmail_oauth,microsoft_oauth",
 });
 for (const role of ["auth", "api", "worker", "dispatcher"]) {
   const key = role === "api" ? "RECRUITMENT_DATABASE_URL" : `RECRUITMENT_${role.toUpperCase()}_DATABASE_URL`;
-  env[key] = `postgresql+psycopg://recruitment_${role}:${state[role]}@127.0.0.1:55440/recruitment_auth_test`;
+  env[key] = `postgresql+psycopg://recruitment_${role}:${state[role]}@${database.host}${database.pathname}`;
 }
 
 const child = spawn(

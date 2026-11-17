@@ -1,11 +1,5 @@
 export type Membership = { tenant_id: string; name: string; role: "recruiter" };
 export type Identity = { user_id: string; memberships: Membership[] };
-export type Criterion = {
-  text: string;
-  required: boolean;
-  strict: boolean;
-  weight: number;
-};
 export type Opening = {
   id: string;
   title: string;
@@ -13,14 +7,9 @@ export type Opening = {
   status: "active" | "paused" | "closed";
   revision: number;
   source_revision: number;
-  criteria_status: "queued" | "processing" | "ready" | "failed";
-  criteria_error: string | null;
-  criteria_metadata: Record<string, unknown>;
   details: JobDetails;
   questions: string[];
   documents: JobDocument[];
-  shortlist_threshold: number;
-  criteria: (Criterion & { id: string })[];
 };
 export type JobDetails = {
   department?: string | null;
@@ -62,60 +51,43 @@ export type Application = {
   profile: {
     name?: string | null;
     email?: string | null;
+    phone?: string | null;
     mobile?: string | null;
     skills?: string[];
   };
 };
-export type Evidence = { quote: string } & (
-  | { chunk_id: string; source_spans: { page: number | null }[] }
-  | { source_id: string; source_kind: "page" | "document"; page: number | null; char_start: number; char_end: number }
-);
-export type Grade = {
-  criterion_id: string;
-  criterion: string;
-  required: boolean;
-  status: string;
+export type CVMatch = {
+  fit: boolean;
+  score: number;
+  matched: string[];
+  missing: string[];
+  exp_ok: boolean;
   reason: string;
-  evidence: Evidence[];
 };
-export type Match = {
+export type LegacyMatch = {
   match_run_id: string;
   score: number | null;
-  score_provisional: boolean;
-  confidence: number | null;
-  opening_id: string | null;
-  opening_title: string | null;
-  shortlist_threshold: number;
   recommendation: string;
   reason: string;
-  provider: string;
-  model: string;
-  prompt_version: string;
-  scoring_strategy: "rag" | "full_text";
-  embedding_model: string | null;
-  embedding_dimensions: number | null;
-  embedding_fingerprint: string | null;
-  processing_config: Record<string, unknown>;
-  missing_required_criteria: string[];
-  processed_at: string;
-  criteria: Grade[];
 };
-export type ExperienceSource = { id: string; text: string; opening_id: string | null; page: number | null; char_start: number; char_end: number };
+export type Match = CVMatch | LegacyMatch;
 export type RoleAssessment = {
-  id: string; opening_id: string; opening_title: string; opening_status: string;
-  state: string; recommendation: string; reason: string; confidence: number | null;
-  score: number | null; score_provisional: boolean; match_run_id: string | null; failure_code: string | null;
-  eligibility: { status?: "passed" | "failed" | "unknown" | "not_required";
-    professional_months?: number; relevant_months?: number; required_total_months?: number;
-    required_relevant_months?: number; reason?: string; evidence?: ExperienceSource[];
-    checks?: { kind: string; domain: string | null; counted_months: number; required_months: number; status: string }[] };
+  id: string;
+  opening_id: string;
+  opening_title: string;
+  opening_status: string;
+  state: string;
+  recommendation: string;
+  reason: string;
+  score: number | null;
+  score_provisional: boolean;
+  match_result: CVMatch | null;
 };
 export type Evaluation = {
   id: string; resume_id: string; state: string; recommendation: string; reason: string;
   confidence: number | null; recommended_assessment_id: string | null; processed_at: string | null;
   processing_config: Record<string, unknown>; roles: RoleAssessment[];
 };
-export type AssessmentDetail = { assessment: RoleAssessment; result: Match | null };
 export type MatchResponse = { status: string; result: Match | null; evaluation: Evaluation | null };
 export type Retention = {
   rejected_retention_days: number;

@@ -26,14 +26,9 @@ const opening: Opening = {
   status: "active",
   revision: 2,
   source_revision: 1,
-  criteria_status: "ready",
-  criteria_error: null,
-  criteria_metadata: {},
   details: {},
   questions: [],
   documents: [],
-  shortlist_threshold: 75,
-  criteria: [],
 };
 
 function form(initial?: Opening) {

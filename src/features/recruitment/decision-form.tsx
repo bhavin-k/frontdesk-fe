@@ -10,10 +10,10 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { recruitmentCopy as copy } from "@/lib/copy";
 import { api } from "./api";
-import type { Application, Evaluation, Match } from "./types";
+import type { Application, Evaluation, LegacyMatch } from "./types";
 
 export function DecisionForm({ base, application, match, evaluation, assessmentId, onSaved }: {
-  base: string; application: Application; match: Match | null; evaluation: Evaluation | null;
+  base: string; application: Application; match: LegacyMatch | null; evaluation: Evaluation | null;
   assessmentId: string | null; onSaved: () => void;
 }) {
   const { t } = useTranslation("dashboard");
@@ -44,6 +44,9 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
       setBusy(false);
     }
   }
+  const canSelect = !evaluation || evaluation.roles.some(
+    (role) => role.id === assessmentId && role.opening_status === "active",
+  );
   const unavailable = busy || (evaluation !== null && evaluation.state !== "completed");
   return <>
     <form onSubmit={(event) => {
@@ -59,7 +62,7 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
               setDecision(event.target.value); setConfirmed(false);
             }}>
               <NativeSelectOption value="" disabled>{copy.chooseDecision}</NativeSelectOption>
-              <NativeSelectOption value="shortlist">{copy.selectCandidate}</NativeSelectOption>
+              <NativeSelectOption value="shortlist" disabled={!canSelect}>{copy.selectCandidate}</NativeSelectOption>
               <NativeSelectOption value="reject">{copy.reject}</NativeSelectOption>
             </NativeSelect>
           </Field>
@@ -69,7 +72,7 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
           </Field>}
           {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           <Button type="submit" loading={busy} disabled={unavailable || !decision ||
-            (decision === "reject" && !confirmed) || (decision === "shortlist" && evaluation !== null && !assessmentId)}>
+            (decision === "reject" && !confirmed) || (decision === "shortlist" && !canSelect)}>
             {copy.saveDecision}
           </Button>
         </FieldGroup>

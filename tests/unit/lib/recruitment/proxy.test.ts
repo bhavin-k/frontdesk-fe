@@ -15,7 +15,6 @@ describe("private recruitment API bridge", () => {
   it.each([
     ["POST", `tenants/${id}/openings/${id}/actions`],
     ["PATCH", `tenants/${id}/openings/${id}`],
-    ["POST", `tenants/${id}/openings/${id}/criteria/retry`],
   ])(
     "forwards the explicit opening %s route with server authorization",
     async (method, path) => {

@@ -41,11 +41,10 @@ for (const mobile of [false, true]) {
     const base = `/api/recruitment/tenants/${tenant}`;
     const openings: { id: string }[] = [];
     for (const [title, description] of [["Senior Python", "2 years relevant experience; Python development"], ["Junior Python", "Python development"]]) {
-      const created = await page.request.post(`${base}/openings`, { headers: { origin }, data: { title, job_description: description } });
+      const created = await page.request.post(`${base}/openings`, { headers: { origin }, data: { title, job_description: description, details: { total_experience_years: title.startsWith("Senior") ? 2 : 0 } } });
       expect(created.status()).toBe(201);
       const role = await created.json();
       openings.push(role);
-      await expect.poll(async () => (await (await page.request.get(`${base}/openings/${role.id}`)).json()).criteria_status).toBe("ready");
     }
     const uploaded = await page.request.post(`${base}/openings/${openings[0].id}/cv-uploads`, {
       headers: { origin, "Idempotency-Key": randomUUID() },
@@ -56,11 +55,9 @@ for (const mobile of [false, true]) {
     await expect.poll(async () => (await (await page.request.get(`${base}/cv-uploads/${upload.upload_id}`)).json()).status).toBe("completed");
     const uploadState = await (await page.request.get(`${base}/cv-uploads/${upload.upload_id}`)).json();
     const assessed = await (await page.request.get(`${base}/applications/${uploadState.application_id}/match-results`)).json();
-    const strategy = process.env.RECRUITMENT_E2E_SCORING_STRATEGY ?? "rag";
-    expect(assessed.result.scoring_strategy).toBe(strategy);
     const senior = assessed.evaluation.roles.find((role: { opening_id: string }) => role.opening_id === openings[0].id);
     const junior = assessed.evaluation.roles.find((role: { opening_id: string }) => role.opening_id === openings[1].id);
-    expect(senior.eligibility.professional_months).toBe(4);
+    expect(senior.match_result.exp_ok).toBe(false);
     expect(assessed.evaluation.recommendation).toBe("recommended_shortlist");
     expect((await (await page.request.get(`${base}/overview`)).json()).totals.shortlisted).toBe(0);
     await page.goto(`/dashboard/review/${upload.upload_id}`);
@@ -68,21 +65,17 @@ for (const mobile of [false, true]) {
     await expect(page.getByLabel("Recruiter reason", { exact: true })).toHaveCount(0);
     await expect(page.locator("#decision option:not([disabled])")).toHaveText(["Select", "Reject"]);
     await page.getByLabel("Assessed role", { exact: true }).selectOption(senior.id);
-    await expect(page.getByTestId("role-match-score")).toHaveText("Not scored — experience requirement not met");
-    await expect(page.getByText("CV documents 4 months of professional experience; this role requires 24 months. Internships are excluded.", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Not fit", { exact: true })).toBeVisible();
+    await expect(page.getByText("Below the experience minimum", { exact: true }).first()).toBeVisible();
     await page.getByLabel("Assessed role", { exact: true }).selectOption(junior.id);
     await expect(page.getByTestId("role-match-score")).toHaveText("100/100");
-    if (strategy === "full_text") {
-      await expect(page.locator("figcaption").filter({ hasText: /^Page 1$/ }).first()).toBeVisible();
-    } else {
-      await expect(page.locator("figcaption").filter({ hasText: "CV chunk" }).first()).toBeVisible();
-    }
+    await expect(page.getByText("Meets the experience minimum", { exact: true })).toBeVisible();
     await page.getByLabel("Decision", { exact: true }).selectOption("shortlist");
     await page.getByRole("button", { name: "Save recruiter decision", exact: true }).click();
     await expect(page.getByText("Saved recruiter decision", { exact: true })).toBeVisible();
     await expect.poll(async () => (await (await page.request.get(`${base}/applications/${uploadState.application_id}`)).json()).status).toBe("shortlisted");
     await page.getByLabel("Decision", { exact: true }).selectOption("reject");
-    await page.getByRole("checkbox", { name: "I reviewed the evidence and confirm this rejection", exact: true }).check();
+    await page.getByRole("checkbox", { name: "I reviewed the CV and confirm this rejection", exact: true }).check();
     await page.getByRole("button", { name: "Save recruiter decision", exact: true }).click();
     await expect(page.getByRole("alertdialog")).toBeVisible();
     await page.getByRole("button", { name: "Confirm rejection", exact: true }).click();

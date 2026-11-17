@@ -37,7 +37,7 @@ import {
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import {
   OpeningActions,
-  OpeningPreparation,
+  OpeningStatusHint,
   OpeningSetup,
 } from "./opening-management";
 import {
@@ -247,35 +247,10 @@ export function OpeningDetail({ id }: { id: string }) {
               <StatusBadge value={opening.data.status} />
               <OpeningActions opening={opening.data} />
             </div>
-            <OpeningPreparation opening={opening.data} />
+            <OpeningStatusHint opening={opening.data} />
             <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
               <div className="flex min-w-0 flex-col gap-6">
                 <OpeningSetup opening={opening.data} />
-                <SectionBlock title={t("dashboard:openings.criteria")}>
-                  <TableCard>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t("recruitment:criterion")}</TableHead>
-                          <TableHead>{t("recruitment:required")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {opening.data.criteria.map((criterion) => (
-                          <TableRow key={criterion.id}>
-                            <TableCell className="whitespace-normal">
-                              {criterion.text}
-                            </TableCell>
-                            <TableCell>
-                              {criterion.required ? "✓" : "—"}
-                              {criterion.strict ? " *" : ""}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableCard>
-                </SectionBlock>
               </div>
               {opening.data.status === "active" && (
                 <Card>

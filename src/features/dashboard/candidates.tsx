@@ -10,6 +10,7 @@ import { api, displayTime } from "@/features/recruitment/api";
 import type { Page, Upload } from "@/features/recruitment/types";
 import type { Candidate, Resume } from "@/features/recruitment/intake/types";
 import { ApplicationReview } from "@/features/recruitment/application-review";
+import { CandidateContactDetails } from "@/features/recruitment/candidate-contact-details";
 import { useBusiness } from "./business-context";
 import {
   PageIntro,
@@ -152,10 +153,11 @@ export function CandidatesPage() {
   );
 }
 
-function ContactEditor({ candidate }: { candidate: Candidate }) {
+function CandidateContactCard({ candidate }: { candidate: Candidate }) {
   const { t } = useTranslation(["intake", "dashboard"]);
   const { base } = useBusiness();
   const query = useQueryClient();
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
@@ -174,6 +176,7 @@ function ContactEditor({ candidate }: { candidate: Candidate }) {
           reason: form.get("reason"),
         }),
       });
+      setEditing(false);
       toast.success(t("dashboard:candidates.contactSaved"));
       await query.invalidateQueries({ queryKey: ["recruitment"] });
     } catch (cause) {
@@ -186,51 +189,81 @@ function ContactEditor({ candidate }: { candidate: Candidate }) {
     <Card>
       <CardHeader>
         <CardTitle>{t("dashboard:candidates.contact")}</CardTitle>
-        <CardDescription>{t("profileHelp")}</CardDescription>
+        {editing ? <CardDescription>{t("profileHelp")}</CardDescription> : null}
       </CardHeader>
-      <CardContent>
-        <form onSubmit={submit}>
-          <fieldset disabled={busy}>
-            <FieldGroup>
-              {(["name", "email", "mobile"] as const).map((field) => (
-                <Field key={field}>
-                  <FieldLabel htmlFor={`contact-${field}`}>
-                    {t(field)}
-                  </FieldLabel>
-                  <Input
-                    id={`contact-${field}`}
-                    name={field}
-                    type={
-                      field === "email"
-                        ? "email"
-                        : field === "mobile"
-                          ? "tel"
-                          : "text"
-                    }
-                    maxLength={
-                      field === "email" ? 320 : field === "mobile" ? 40 : 200
-                    }
-                    defaultValue={candidate.profile[field] ?? ""}
+      <CardContent className="flex flex-col gap-4">
+        {editing ? (
+          <form onSubmit={submit}>
+            <fieldset disabled={busy}>
+              <FieldGroup>
+                {(["name", "email", "mobile"] as const).map((field) => (
+                  <Field key={field}>
+                    <FieldLabel htmlFor={`contact-${field}`}>{t(field)}</FieldLabel>
+                    <Input
+                      id={`contact-${field}`}
+                      name={field}
+                      type={
+                        field === "email"
+                          ? "email"
+                          : field === "mobile"
+                            ? "tel"
+                            : "text"
+                      }
+                      maxLength={
+                        field === "email" ? 320 : field === "mobile" ? 40 : 200
+                      }
+                      defaultValue={
+                        (field === "mobile"
+                          ? candidate.profile.phone ?? candidate.profile.mobile
+                          : candidate.profile[field]) ?? ""
+                      }
+                    />
+                  </Field>
+                ))}
+                <Field>
+                  <FieldLabel htmlFor="contact-reason">{t("reason")}</FieldLabel>
+                  <Textarea
+                    id="contact-reason"
+                    name="reason"
+                    required
+                    minLength={5}
+                    maxLength={1000}
                   />
                 </Field>
-              ))}
-              <Field>
-                <FieldLabel htmlFor="contact-reason">{t("reason")}</FieldLabel>
-                <Textarea
-                  id="contact-reason"
-                  name="reason"
-                  required
-                  minLength={5}
-                  maxLength={1000}
-                />
-              </Field>
-              {error && <ErrorNotice error={error} />}
-              <Button type="submit" disabled={busy} loading={busy}>
-                {t("saveContacts")}
-              </Button>
-            </FieldGroup>
-          </fieldset>
-        </form>
+                {error && <ErrorNotice error={error} />}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" disabled={busy} loading={busy}>
+                    {t("saveContacts")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setError(null);
+                      setEditing(false);
+                    }}
+                  >
+                    {t("cancel")}
+                  </Button>
+                </div>
+              </FieldGroup>
+            </fieldset>
+          </form>
+        ) : (
+          <>
+            <CandidateContactDetails profile={candidate.profile} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => setEditing(true)}
+            >
+              {t("editContacts")}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -309,8 +342,8 @@ export function CandidateDetailPage({ id }: { id: string }) {
             </TabsContent>
             <TabsContent value="profile">
               <div className="grid items-start gap-6 xl:grid-cols-2">
-                <ContactEditor
-                  key={person.data.contact_revision}
+                <CandidateContactCard
+                  key={`${person.data.id}:${person.data.contact_revision}`}
                   candidate={person.data}
                 />
                 <div className="flex min-w-0 flex-col gap-6">

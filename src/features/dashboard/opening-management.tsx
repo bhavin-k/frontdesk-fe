@@ -97,66 +97,13 @@ export function OpeningActions({ opening }: { opening: Opening }) {
   );
 }
 
-export function OpeningPreparation({ opening }: { opening: Opening }) {
+export function OpeningStatusHint({ opening }: { opening: Opening }) {
   const { t } = useTranslation("dashboard");
-  const { base } = useBusiness();
-  const query = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function retry() {
-    setBusy(true);
-    setError("");
-    try {
-      await api(`${base}/openings/${opening.id}/criteria/retry`, {
-        method: "POST",
-        body: JSON.stringify({ expected_revision: opening.revision }),
-      });
-      await query.invalidateQueries({ queryKey: ["recruitment"] });
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  if (opening.status === "active") return null;
   return (
-    <div className="flex flex-col gap-3">
-      {opening.status !== "active" && (
-        <Alert>
-          <AlertDescription>
-            {t(`openings.${opening.status}Hint`)}
-          </AlertDescription>
-        </Alert>
-      )}
-      {opening.status !== "closed" && opening.criteria_status !== "ready" && (
-        <Alert
-          variant={
-            opening.criteria_status === "failed" ? "destructive" : "default"
-          }
-        >
-          <AlertDescription className="flex flex-col gap-3">
-            <p>
-              {t(
-                opening.criteria_status === "failed"
-                  ? "openings.preparationFailed"
-                  : "openings.preparing",
-              )}
-            </p>
-            {opening.criteria_status === "failed" && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-fit"
-                loading={busy}
-                onClick={() => void retry()}
-              >
-                {t("openings.retry")}
-              </Button>
-            )}
-            {error && <p role="alert">{error}</p>}
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
+    <Alert>
+      <AlertDescription>{t("openings." + opening.status + "Hint")}</AlertDescription>
+    </Alert>
   );
 }
 
