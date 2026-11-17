@@ -1,0 +1,37 @@
+{
+  "appName": "Frontdesk",
+  "loading": {
+    "loading": "Loading…",
+    "retry": "Retry",
+    "saving": "Saving…"
+  },
+  "errors": {
+    "unexpected": "This page could not load."
+  },
+  "sidebar": {
+    "toggle": "Toggle sidebar",
+    "title": "Navigation",
+    "description": "Frontdesk workspace"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back",
+    "refresh": "Refresh",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "accessibility": {
+    "skipToContent": "Skip to content",
+    "close": "Close",
+    "toggleSidebar": "Toggle sidebar",
+    "sidebarTitle": "Sidebar",
+    "sidebarDescription": "Frontdesk navigation"
+  },
+  "status": {
+    "paused": "Paused"
+  }
+}

@@ -1,0 +1,31 @@
+# Local configuration and credentials
+.env*
+!.env.example
+.local/
+.local-notes/
+.secrets/
+.credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies, build output and test reports
+node_modules/
+.next/
+.next-*/
+out/
+dist/
+build/
+next-env.d.ts
+*.tsbuildinfo
+*.log
+coverage/
+playwright-report/
+test-results/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
