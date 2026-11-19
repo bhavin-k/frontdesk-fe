@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Inbox } from "lucide-react";
 import { useBusiness } from "./business-context";
-import { api } from "@/features/recruitment/api";
+import { api, recruitmentQueryKey } from "@/features/recruitment/api";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,23 @@ import {
   EmptyContent,
 } from "@/components/ui/empty";
 
-export function useResource<T>(path: string, options: { poll?: boolean } = {}) {
+export function useResource<T>(
+  path: string,
+  options: {
+    poll?: boolean | number | ((data: T | undefined) => boolean | number);
+    staleTime?: number;
+  } = {},
+) {
   const { base, userId } = useBusiness();
   return useQuery({
-    queryKey: ["recruitment", userId, base, path],
+    queryKey: recruitmentQueryKey(userId, base, path),
+    ...(options.staleTime === undefined ? {} : { staleTime: options.staleTime }),
     enabled: !!base,
     queryFn: ({ signal }) => api<T>(`${base}${path}`, {}, signal),
-    refetchInterval: options.poll ? 5000 : false,
+    refetchInterval: (query) => {
+      const poll = typeof options.poll === "function" ? options.poll(query.state.data) : options.poll;
+      return typeof poll === "number" ? poll : poll ? 5000 : false;
+    },
   });
 }
 export function PageIntro({

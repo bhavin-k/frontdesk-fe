@@ -195,6 +195,7 @@ function MailboxCard({
         <ImapConnectForm
           base={base}
           mailbox={row}
+          onChanged={onChanged}
           onDone={() => {
             setRefreshImap(false);
             onChanged();
@@ -340,6 +341,7 @@ export function Mailboxes({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showImap, setShowImap] = useState(false);
+  const unconfigured = capabilities.items.filter((provider) => !provider.configured);
   async function connect(provider: string) {
     setBusy(true);
     setError("");
@@ -417,6 +419,8 @@ export function Mailboxes({
             <ImapConnectForm
               base={base}
               openingId={chosenOpening}
+              rows={rows}
+              onChanged={onChanged}
               onDone={() => {
                 setShowImap(false);
                 onChanged();
@@ -427,8 +431,13 @@ export function Mailboxes({
         {capabilities.items.length === 0 && (
           <p className="text-sm text-muted-foreground">{copy.noMethods}</p>
         )}
-        {capabilities.items.some((provider) => !provider.configured) && (
-          <p className="text-sm text-muted-foreground">{copy.providerSetup}</p>
+        {unconfigured.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {copy.providerSetupMethods.replace(
+              "{methods}",
+              unconfigured.map((provider) => methodLabel(provider.connection_method)).join(", "),
+            )}
+          </p>
         )}
         {error && (
           <Alert variant="destructive">

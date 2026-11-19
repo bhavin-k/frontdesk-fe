@@ -216,7 +216,7 @@ export function OpeningDetail({ id }: { id: string }) {
   const [offset, setOffset] = useState(0);
   const query = useQueryClient();
   const router = useRouter();
-  const opening = useResource<Opening>(`/openings/${id}`, { poll: true });
+  const opening = useResource<Opening>(`/openings/${id}`, { poll: 30000 });
   const files = useResource<Page<Upload>>(
     `/cv-uploads?opening_id=${id}&limit=20&offset=${offset}`,
     { poll: true },

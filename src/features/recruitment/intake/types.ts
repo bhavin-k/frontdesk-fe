@@ -54,6 +54,16 @@ export type Candidate = {
     created_at: string;
   }[];
 };
+export type CandidateSummary = Candidate & {
+  application_id: string | null;
+  status: string;
+  opening_id: string | null;
+  opening_title: string | null;
+  score: number | null;
+  no_matching_opening: boolean;
+  latest_upload_id: string | null;
+};
+
 export type Resume = {
   id: string;
   version: number;

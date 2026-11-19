@@ -24,8 +24,27 @@ coverage/
 playwright-report/
 test-results/
 
+# Local tests and fixtures (excluded from version control by request)
+tests/
+**/__tests__/
+*.test.*
+*.spec.*
+
+# Temporary files, database exports and editor backups
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+*.dump
+*.sql.gz
+
 # Editor and OS files
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+Desktop.ini

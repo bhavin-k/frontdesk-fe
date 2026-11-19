@@ -1,4 +1,5 @@
-import { FuturePage } from "@/features/dashboard/future";
+import { ScreeningCallsPage } from "@/features/dashboard/screening-calls";
+
 export default function Page() {
-  return <FuturePage kind="calls" />;
+  return <ScreeningCallsPage />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import copy from "../../../../public/locales/en/intake.json";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,35 +11,70 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import type { Mailbox } from "./types";
+
+function isVerified(row: Mailbox) {
+  return (
+    row.enabled &&
+    row.connection_method === "imap" &&
+    ["connected", "needs_configuration"].includes(row.status)
+  );
+}
 
 export function ImapConnectForm({
   base,
   openingId,
   mailbox,
+  rows,
+  onChanged,
   onDone,
   onCancel,
 }: {
   base: string;
   openingId?: string;
   mailbox?: Mailbox;
+  rows?: Mailbox[];
+  onChanged: () => void;
   onDone: () => void;
   onCancel: () => void;
 }) {
   const id = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [unconfirmed, setUnconfirmed] = useState<{
+    email: string;
+    generation: number | undefined;
+  } | null>(null);
+  const saved =
+    unconfirmed &&
+    (mailbox
+      ? isVerified(mailbox) && mailbox.generation > (unconfirmed.generation ?? 0)
+      : rows?.some(
+          (row) => isVerified(row) && row.email?.toLowerCase() === unconfirmed.email,
+        ));
+  useEffect(() => {
+    if (saved) onDone();
+  }, [saved, onDone]);
 
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
     setError("");
+    setUnconfirmed(null);
     const form = event.currentTarget;
     const values = new FormData(form);
+    const address = String(values.get("email") ?? "").trim().toLowerCase();
     const password = form.elements.namedItem(
       "app_password",
     ) as HTMLInputElement;
+    password.value = "";
+    if (
+      !mailbox &&
+      rows?.some((row) => isVerified(row) && row.email?.toLowerCase() === address)
+    ) {
+      onDone();
+      return;
+    }
     const body = JSON.stringify({
       app_password: values.get("app_password"),
       ...(mailbox
@@ -49,7 +84,7 @@ export function ImapConnectForm({
             opening_id: openingId,
           }),
     });
-    password.value = "";
+    setBusy(true);
     try {
       await api<Mailbox>(
         `${base}/mailboxes/${mailbox ? `${mailbox.id}/imap-credentials` : "imap"}`,
@@ -57,7 +92,16 @@ export function ImapConnectForm({
       );
       onDone();
     } catch (cause) {
-      setError((cause as Error).message);
+      if (
+        cause instanceof ApiError &&
+        ["API_UNAVAILABLE", "CONNECTION_LOST", "INVALID_RESPONSE"].includes(cause.code)
+      ) {
+        setUnconfirmed({ email: address, generation: mailbox?.generation });
+        setError(copy.imapVerifyUnconfirmed);
+        onChanged();
+      } else {
+        setError((cause as Error).message);
+      }
     } finally {
       setBusy(false);
     }

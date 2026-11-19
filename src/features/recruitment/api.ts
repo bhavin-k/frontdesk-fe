@@ -60,6 +60,9 @@ export async function apiWithStatus<T>(
 }
 
 export const tenantPath = (id: string) => `/tenants/${encodeURIComponent(id)}`;
+export const recruitmentQueryKey = (userId: string, base: string | null, path: string) =>
+  ["recruitment", userId, base, path] as const;
+export const candidatePagePath = (offset = 0) => `/candidates?limit=20&offset=${offset}`;
 export const isProcessing = (status: string) =>
   !["completed", "needs_review"].includes(status);
 export const displayTime = (value: string) =>

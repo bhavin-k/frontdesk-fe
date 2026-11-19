@@ -69,7 +69,7 @@ export function Overview() {
   const [opening, setOpening] = useState("");
   const overview = useResource<OverviewData>(
     `/overview${opening ? `?opening_id=${encodeURIComponent(opening)}` : ""}`,
-    { poll: true },
+    { poll: 30000 },
   );
   const unfiltered = useResource<OverviewData>("/overview");
   return (

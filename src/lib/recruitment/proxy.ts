@@ -5,6 +5,7 @@ const uuid =
 const tenant = `/tenants/${uuid}`;
 const rules = [
   ["GET", "/me"],
+  ["GET", "/dashboard-bootstrap"],
   ["POST", "/tenants"],
   ["GET", tenant],
   ["GET", `${tenant}/overview`],
@@ -45,6 +46,11 @@ const rules = [
   ["GET", `${tenant}/applications/${uuid}/role-assessments/${uuid}`],
   ["POST", `${tenant}/applications/${uuid}/review-decisions`],
   ["GET", `${tenant}/review-queue`],
+  ["GET", `${tenant}/screening-requests`],
+  ["GET", `${tenant}/screening-requests/${uuid}`],
+  ["POST", `${tenant}/screening-requests/${uuid}/actions`],
+  ["GET", `${tenant}/screening-settings`],
+  ["PATCH", `${tenant}/screening-settings`],
   ["GET", `${tenant}/retention-settings`],
   ["PATCH", `${tenant}/retention-settings`],
   ["GET", `${tenant}/members`],
@@ -113,7 +119,9 @@ export async function forwardRecruitmentRequest(
   for (const key of incoming.searchParams.keys()) {
     if (
       !(
-        path.endsWith("/overview")
+        path === "/dashboard-bootstrap"
+          ? ["tenant_id"]
+          : path.endsWith("/overview")
           ? ["opening_id", "days"]
           : /\/openings$/.test(path)
             ? ["limit", "offset", "status"]
@@ -130,6 +138,13 @@ export async function forwardRecruitmentRequest(
   const headers = new Headers({ Authorization: `Bearer ${options.token}` });
   const contentType = request.headers.get("content-type");
   const upload = request.method === "POST" && path.endsWith("/cv-uploads");
+  const imapVerification =
+    request.method === "POST" &&
+    (path.endsWith("/mailboxes/imap") || path.endsWith("/imap-credentials"));
+  const applicationReview = /\/applications\/[^/]+(?:\/(?:match-results|review-decisions))?$/.test(path);
+  const openingSave =
+    (request.method === "POST" && /\/openings$/.test(path)) ||
+    (request.method === "PATCH" && /\/openings\/[^/]+$/.test(path));
   const jobFiles =
     request.method === "POST" &&
     (path.endsWith("/openings") || path.endsWith("/documents")) &&
@@ -173,7 +188,7 @@ export async function forwardRecruitmentRequest(
       body,
       cache: "no-store",
       redirect: "error",
-      signal: AbortSignal.timeout(upload || jobFiles ? 60000 : 15000),
+      signal: AbortSignal.timeout(upload || jobFiles || imapVerification || applicationReview || openingSave ? 60000 : 15000),
     });
     if (upstream.status === 204)
       return new Response(null, {
@@ -212,9 +227,15 @@ export async function forwardRecruitmentRequest(
         502,
       );
     }
+    const responseHeaders: Record<string, string> = { "Cache-Control": "no-store" };
+    if (process.env.NODE_ENV === "development" && path === "/dashboard-bootstrap") {
+      const timings = upstream.headers.get("Server-Timing")?.split(",").map(value => value.trim())
+        .filter(value => /^(auth_checkout|authentication|memberships|candidate_checkout|candidates|total);dur=\d+(?:\.\d+)?$/.test(value));
+      if (timings?.length) responseHeaders["Server-Timing"] = timings.join(", ");
+    }
     return Response.json(await upstream.json(), {
       status: upstream.status,
-      headers: { "Cache-Control": "no-store" },
+      headers: responseHeaders,
     });
   } catch (cause) {
     if (cause instanceof RangeError)

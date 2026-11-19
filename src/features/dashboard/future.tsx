@@ -1,21 +1,16 @@
 "use client";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Phone, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, SlidersHorizontal } from "lucide-react";
 import { PageIntro, EmptyState } from "./ui";
 import { Badge } from "@/components/ui/badge";
 
 export function FuturePage({
   kind,
 }: {
-  kind: "interviews" | "calls" | "interviewer";
+  kind: "interviews" | "interviewer";
 }) {
   const { t } = useTranslation("dashboard");
-  const Icon =
-    kind === "interviews"
-      ? CalendarDays
-      : kind === "calls"
-        ? Phone
-        : SlidersHorizontal;
+  const Icon = kind === "interviews" ? CalendarDays : SlidersHorizontal;
   return (
     <div className="flex flex-col gap-6">
       <PageIntro
@@ -29,11 +24,7 @@ export function FuturePage({
       />
       <p className="text-sm text-muted-foreground">
         {t(
-          kind === "interviews"
-            ? "future.noInterviews"
-            : kind === "calls"
-              ? "future.noCalls"
-              : "future.noInterviewer",
+          kind === "interviews" ? "future.noInterviews" : "future.noInterviewer",
         )}
       </p>
     </div>

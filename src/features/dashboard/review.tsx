@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { ApplicationReview } from "@/features/recruitment/application-review";
+import { isProcessing } from "@/features/recruitment/api";
 import type { Upload } from "@/features/recruitment/types";
 import { useBusiness } from "./business-context";
 import {
@@ -199,7 +200,9 @@ export function ReviewDetailPage({ id }: { id: string }) {
   const { base } = useBusiness();
   const query = useQueryClient();
   const [refresh, setRefresh] = useState(0);
-  const upload = useResource<Upload>(`/cv-uploads/${id}`, { poll: true });
+  const upload = useResource<Upload>(`/cv-uploads/${id}`, {
+    poll: data => !data || isProcessing(data.status),
+  });
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageIntro

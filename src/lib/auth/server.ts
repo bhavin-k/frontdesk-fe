@@ -14,7 +14,7 @@ const globalAuth = globalThis as typeof globalThis & {
 export function getAuth(): Promise<Auth> {
   const config = readAuthConfig();
   // Bump the policy version when changing auth behavior during a long-lived dev session.
-  const key = createHash("sha256").update(JSON.stringify({ policyVersion: 1, config })).digest("hex");
+  const key = createHash("sha256").update(JSON.stringify({ policyVersion: 3, config })).digest("hex");
   if (!globalAuth.recruitmentAuth || globalAuth.recruitmentAuthConfigKey !== key) {
     const previousPool = globalAuth.recruitmentAuthPool;
     globalAuth.recruitmentAuthConfigKey = key;
@@ -28,7 +28,15 @@ export function getAuth(): Promise<Auth> {
 }
 
 async function initializeAuth(config: ReturnType<typeof readAuthConfig>): Promise<Auth> {
-  const pool = new Pool({ connectionString: config.databaseURL, max: 10, connectionTimeoutMillis: 5000 });
+  const pool = new Pool({
+    connectionString: config.databaseURL,
+    max: 10,
+    connectionTimeoutMillis: 20_000,
+    // Reuse the connection across dashboard visits without caching authenticated sessions.
+    idleTimeoutMillis: 120_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+  });
   globalAuth.recruitmentAuthPool = pool;
   // Do not log database errors here: connection details can contain credentials.
   pool.on("error", () => console.error("Recruitment authentication database connection failed."));

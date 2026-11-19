@@ -9,7 +9,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { recruitmentCopy as copy } from "@/lib/copy";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import type { Application, Evaluation, LegacyMatch } from "./types";
 
 export function DecisionForm({ base, application, match, evaluation, assessmentId, onSaved }: {
@@ -21,9 +21,17 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
   const [confirmed, setConfirmed] = useState(false);
   const [dialog, setDialog] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const request = useRef<{ payload: string; key: string } | null>(null);
+  const path = `${base}/applications/${application.id}`;
+  const selectedRole = evaluation?.roles.find((role) => role.id === assessmentId);
+  const alreadyShortlisted = application.status === "shortlisted" &&
+    (!evaluation || selectedRole?.opening_id === application.opening_id);
+  const canSelect = !alreadyShortlisted && (!evaluation || selectedRole?.opening_status === "active");
+  const unavailable = busy || saved || (evaluation !== null && evaluation.state !== "completed");
   async function persist() {
+    if (unavailable || !decision || (decision === "shortlist" && !canSelect)) return;
     const payload = JSON.stringify({
       ...(evaluation ? { evaluation_id: evaluation.id, expected_version: application.version,
         role_assessment_id: assessmentId } : { match_run_id: match?.match_run_id }),
@@ -33,9 +41,22 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
     setBusy(true);
     setError("");
     try {
-      await api(`${base}/applications/${application.id}/review-decisions`, {
-        method: "POST", body: payload, headers: { "Idempotency-Key": request.current.key },
-      });
+      try {
+        await api(`${path}/review-decisions`, {
+          method: "POST", body: payload, headers: { "Idempotency-Key": request.current.key },
+        });
+      } catch (cause) {
+        if (!(cause instanceof ApiError) ||
+          !["API_UNAVAILABLE", "CONNECTION_LOST", "INVALID_RESPONSE"].includes(cause.code)) throw cause;
+        const current = await api<Application>(path).catch(() => null);
+        if (!current || current.version <= application.version ||
+          current.latest_evaluation_id !== application.latest_evaluation_id ||
+          current.recruiter_decision?.decision !== decision ||
+          (decision === "shortlist" && current.opening_id !== (selectedRole?.opening_id ?? application.opening_id))) {
+          throw new Error(copy.decisionUnconfirmed);
+        }
+      }
+      setSaved(true);
       onSaved();
     } catch (cause) {
       setError((cause as Error).message);
@@ -44,10 +65,6 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
       setBusy(false);
     }
   }
-  const canSelect = !evaluation || evaluation.roles.some(
-    (role) => role.id === assessmentId && role.opening_status === "active",
-  );
-  const unavailable = busy || (evaluation !== null && evaluation.state !== "completed");
   return <>
     <form onSubmit={(event) => {
       event.preventDefault();
@@ -56,6 +73,9 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
     }}>
       <fieldset disabled={unavailable}>
         <FieldGroup>
+          {(saved || alreadyShortlisted) && <p role="status" className="text-sm">
+            {saved ? copy.decisionSaved : copy.shortlistAlreadySaved}
+          </p>}
           <Field>
             <FieldLabel htmlFor="decision">{copy.decision}</FieldLabel>
             <NativeSelect id="decision" required value={decision} onChange={(event) => {
@@ -73,7 +93,7 @@ export function DecisionForm({ base, application, match, evaluation, assessmentI
           {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           <Button type="submit" loading={busy} disabled={unavailable || !decision ||
             (decision === "reject" && !confirmed) || (decision === "shortlist" && !canSelect)}>
-            {copy.saveDecision}
+            {saved ? copy.decisionSaved : copy.saveDecision}
           </Button>
         </FieldGroup>
       </fieldset>

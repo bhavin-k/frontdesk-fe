@@ -63,6 +63,24 @@ export type CVMatch = {
   missing: string[];
   exp_ok: boolean;
   reason: string;
+  score_breakdown?: {
+    policy_version: string;
+    coverage_percent: number;
+    base_score: number;
+    preferred_bonus: number;
+    additional_bonus: number;
+    experience_required: number;
+    experience_documented: number;
+    criteria: {
+      id: string;
+      label: string;
+      kind: "required" | "preferred";
+      status: "met" | "partial" | "undocumented";
+      credit: number;
+      evidence: { path: string; quote: string } | null;
+    }[];
+    additional_skills: { skill: string; related_to: string; evidence: { path: string; quote: string } }[];
+  } | null;
 };
 export type LegacyMatch = {
   match_run_id: string;

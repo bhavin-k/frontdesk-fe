@@ -6,9 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import { api, displayTime } from "@/features/recruitment/api";
+import { api, candidatePagePath, displayTime, isProcessing } from "@/features/recruitment/api";
 import type { Page, Upload } from "@/features/recruitment/types";
-import type { Candidate, Resume } from "@/features/recruitment/intake/types";
+import type { Candidate, CandidateSummary, Resume } from "@/features/recruitment/intake/types";
 import { ApplicationReview } from "@/features/recruitment/application-review";
 import { CandidateContactDetails } from "@/features/recruitment/candidate-contact-details";
 import { useBusiness } from "./business-context";
@@ -43,20 +43,12 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 
-type CandidateSummary = Candidate & {
-  application_id: string | null;
-  status: string;
-  opening_title: string | null;
-  score: number | null;
-  latest_upload_id: string | null;
-};
-
 export function CandidatesPage() {
   const { t } = useTranslation("dashboard");
   const [offset, setOffset] = useState(0);
   const candidates = useResource<Page<CandidateSummary>>(
-    `/candidates?limit=20&offset=${offset}`,
-    { poll: true },
+    candidatePagePath(offset),
+    { poll: 30000, staleTime: 30000 },
   );
   return (
     <div className="flex flex-col gap-6">
@@ -101,7 +93,11 @@ export function CandidatesPage() {
                         {candidate.profile.email}
                       </p>
                     </TableCell>
-                    <TableCell>{candidate.opening_title ?? "—"}</TableCell>
+                    <TableCell>
+                      {candidate.no_matching_opening
+                        ? t("candidates.noMatchingOpening")
+                        : (candidate.opening_title ?? "—")}
+                    </TableCell>
                     <TableCell className="tabular-nums">
                       {candidate.score === null
                         ? t("candidates.noScore")
@@ -273,7 +269,9 @@ function CurrentMatch({ uploadId }: { uploadId: string }) {
   const { base } = useBusiness();
   const query = useQueryClient();
   const [refresh, setRefresh] = useState(0);
-  const upload = useResource<Upload>(`/cv-uploads/${uploadId}`, { poll: true });
+  const upload = useResource<Upload>(`/cv-uploads/${uploadId}`, {
+    poll: data => !data || isProcessing(data.status),
+  });
   if (upload.error) return <ErrorNotice error={upload.error} />;
   if (!upload.data || !base) return <TableCardSkeleton />;
   return (

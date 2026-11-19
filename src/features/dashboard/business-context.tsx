@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -44,6 +44,10 @@ type BusinessContext = {
   openCreate: () => void;
 };
 const Context = createContext<BusinessContext | null>(null);
+
+function rememberBusiness(id: string) {
+  document.cookie = `recruitment-business=${encodeURIComponent(id)}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+}
 
 function CreateBusiness({ onCreated }: { onCreated: (id: string) => void }) {
   const { t } = useTranslation("dashboard");
@@ -98,10 +102,12 @@ function CreateBusiness({ onCreated }: { onCreated: (id: string) => void }) {
 export function BusinessProvider({
   userId,
   initialBusinessId,
+  initialIdentity,
   children,
 }: {
   userId: string;
   initialBusinessId?: string;
+  initialIdentity?: Identity;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -112,14 +118,20 @@ export function BusinessProvider({
   const identity = useQuery({
     queryKey: ["identity", userId],
     queryFn: ({ signal }) => api<Identity>("/me", {}, signal),
+    initialData: initialIdentity?.user_id === userId ? initialIdentity : undefined,
+    staleTime: 30000,
   });
   const memberships = identity.data?.memberships ?? [];
   const business = selected
     ? (memberships.find((item) => item.tenant_id === selected) ?? null)
     : (memberships[0] ?? null);
+  const defaultBusinessId = !selected ? business?.tenant_id : undefined;
+  useEffect(() => {
+    if (defaultBusinessId) rememberBusiness(defaultBusinessId);
+  }, [defaultBusinessId]);
   const switchBusiness = (id: string) => {
     setSelected(id);
-    document.cookie = `recruitment-business=${encodeURIComponent(id)}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    rememberBusiness(id);
     queryClient.removeQueries({
       predicate: (query) => query.queryKey[0] === "recruitment",
     });
