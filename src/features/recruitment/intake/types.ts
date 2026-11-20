@@ -55,6 +55,7 @@ export type Candidate = {
   }[];
 };
 export type CandidateSummary = Candidate & {
+  current_source_at?: string | null;
   application_id: string | null;
   status: string;
   opening_id: string | null;

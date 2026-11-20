@@ -70,7 +70,13 @@ export function IntegrationsPage() {
           />
         )
       )}
-      <div className="grid items-start gap-4 md:grid-cols-2">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold">{t("design.forScreening")}</h2>
+        <span className="text-sm text-muted-foreground">
+          {t("integrations.notAvailable")}
+        </span>
+      </div>
+      <div className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4">
         {(
           [
             ["calendar", CalendarDays, "calendarDescription"],
@@ -82,8 +88,10 @@ export function IntegrationsPage() {
           <Card key={key}>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <Icon className="size-5 text-muted-foreground" />
-                <Badge variant="outline">{t("future.coming")}</Badge>
+                <span className="rounded-xl bg-muted p-3">
+                  <Icon className="size-4 text-muted-foreground" />
+                </span>
+                <Badge variant="neutral">{t("design.soon")}</Badge>
               </div>
               <CardTitle>{t(`integrations.${key}`)}</CardTitle>
               <CardDescription>

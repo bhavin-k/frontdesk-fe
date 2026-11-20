@@ -11,8 +11,9 @@ export function SettingsShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("settings.title")} />
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
       <nav
-        className="flex flex-wrap gap-2 border-b pb-4"
+        className="flex flex-wrap gap-1 md:w-56 md:shrink-0 md:flex-col"
         aria-label={t("settings.title")}
       >
         {(["business", "team", "retention", "account", "appearance"] as const).map(
@@ -22,8 +23,9 @@ export function SettingsShell({ children }: { children: ReactNode }) {
               href={`/dashboard/settings/${key}`}
               aria-current={pathname.endsWith(`/${key}`) ? "page" : undefined}
               className={cn(
-                "rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
-                pathname.endsWith(`/${key}`) && "bg-muted text-foreground",
+                "rounded-[10px] px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground",
+                pathname.endsWith(`/${key}`) &&
+                  "bg-card font-semibold text-foreground ring-1 ring-border",
               )}
             >
               {t(`settings.${key}`)}
@@ -31,7 +33,8 @@ export function SettingsShell({ children }: { children: ReactNode }) {
           ),
         )}
       </nav>
-      {children}
+      <div className="min-w-0 flex-1">{children}</div>
+      </div>
     </div>
   );
 }

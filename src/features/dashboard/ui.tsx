@@ -24,16 +24,22 @@ export function useResource<T>(
   options: {
     poll?: boolean | number | ((data: T | undefined) => boolean | number);
     staleTime?: number;
+    enabled?: boolean;
   } = {},
 ) {
   const { base, userId } = useBusiness();
   return useQuery({
     queryKey: recruitmentQueryKey(userId, base, path),
-    ...(options.staleTime === undefined ? {} : { staleTime: options.staleTime }),
-    enabled: !!base,
+    ...(options.staleTime === undefined
+      ? {}
+      : { staleTime: options.staleTime }),
+    enabled: !!base && options.enabled !== false,
     queryFn: ({ signal }) => api<T>(`${base}${path}`, {}, signal),
     refetchInterval: (query) => {
-      const poll = typeof options.poll === "function" ? options.poll(query.state.data) : options.poll;
+      const poll =
+        typeof options.poll === "function"
+          ? options.poll(query.state.data)
+          : options.poll;
       return typeof poll === "number" ? poll : poll ? 5000 : false;
     },
   });
@@ -87,7 +93,7 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <Empty className="border">
+    <Empty className="border bg-card">
       <EmptyHeader>
         <EmptyMedia variant="icon">{icon ?? <Inbox />}</EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
@@ -97,19 +103,39 @@ export function EmptyState({
     </Empty>
   );
 }
+const statusTone: Record<string, "success" | "warning" | "danger"> = {
+  shortlisted: "success",
+  recommended_shortlist: "success",
+  active: "success",
+  connected: "success",
+  idle: "success",
+  resolved: "success",
+  SHORTLISTED: "success",
+  BOOKED: "success",
+  rejected: "danger",
+  recommended_rejection: "danger",
+  failed: "danger",
+  error: "danger",
+  reauthorization_required: "danger",
+  DECLINED: "danger",
+  FAILED_DELIVERY: "danger",
+  needs_review: "warning",
+  paused: "warning",
+  retry_wait: "warning",
+  needs_configuration: "warning",
+  pending_authorization: "warning",
+  open: "warning",
+  NO_RESPONSE: "warning",
+  NEEDS_HUMAN: "warning",
+  EMAIL_MISSING: "warning",
+};
+/** Green for good outcomes, red for rejections and failures, amber for anything waiting on a person, grey otherwise. */
 export function StatusBadge({ value }: { value: string }) {
   const { t } = useTranslation("dashboard");
+  const status = value || "not_assessed";
   return (
-    <Badge
-      variant={
-        value === "rejected"
-          ? "destructive"
-          : value === "shortlisted" || value === "completed"
-            ? "secondary"
-            : "outline"
-      }
-    >
-      {t(`status.${value}`, { defaultValue: value.replaceAll("_", " ") })}
+    <Badge variant={statusTone[status] ?? "neutral"}>
+      {t(`status.${status}`, { defaultValue: status.replaceAll("_", " ") })}
     </Badge>
   );
 }

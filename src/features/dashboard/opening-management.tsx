@@ -1,9 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, Square, Pencil, Download, Trash2 } from "lucide-react";
+import {
+  Pause,
+  Play,
+  Square,
+  Pencil,
+  Download,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,7 +33,13 @@ import type { Opening } from "@/features/recruitment/types";
 import { api, displayTime } from "@/features/recruitment/api";
 import { useBusiness } from "./business-context";
 
-export function OpeningActions({ opening }: { opening: Opening }) {
+export function OpeningActions({
+  opening,
+  compact = false,
+}: {
+  opening: Opening;
+  compact?: boolean;
+}) {
   const { t } = useTranslation("dashboard");
   const { base } = useBusiness();
   const query = useQueryClient();
@@ -47,7 +66,7 @@ export function OpeningActions({ opening }: { opening: Opening }) {
     }
   }
   if (opening.status === "closed") return null;
-  return (
+  const controls = (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         <Button
@@ -95,6 +114,24 @@ export function OpeningActions({ opening }: { opening: Opening }) {
       />
     </div>
   );
+  return compact ? (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("openings.actions")}
+          />
+        }
+      >
+        <MoreHorizontal />
+      </PopoverTrigger>
+      <PopoverContent className="w-auto">{controls}</PopoverContent>
+    </Popover>
+  ) : (
+    controls
+  );
 }
 
 export function OpeningStatusHint({ opening }: { opening: Opening }) {
@@ -102,12 +139,20 @@ export function OpeningStatusHint({ opening }: { opening: Opening }) {
   if (opening.status === "active") return null;
   return (
     <Alert>
-      <AlertDescription>{t("openings." + opening.status + "Hint")}</AlertDescription>
+      <AlertDescription>
+        {t("openings." + opening.status + "Hint")}
+      </AlertDescription>
     </Alert>
   );
 }
 
-export function OpeningSetup({ opening }: { opening: Opening }) {
+export function OpeningSetup({
+  opening,
+  sideContent,
+}: {
+  opening: Opening;
+  sideContent?: ReactNode;
+}) {
   const { t } = useTranslation("dashboard");
   const { base } = useBusiness();
   const query = useQueryClient();
@@ -166,40 +211,72 @@ export function OpeningSetup({ opening }: { opening: Opening }) {
     ([, value]) => value !== null && value !== "",
   );
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>{t("openings.detail")}</CardTitle>
-            {canEdit && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setEditing(editing ? null : opening)}
-              >
-                <Pencil data-icon="inline-start" />
-                {t(editing ? "openings.cancel" : "openings.edit")}
-              </Button>
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col gap-5">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle>{t("design.aboutRole")}</CardTitle>
+              {canEdit && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(editing ? null : opening)}
+                >
+                  <Pencil data-icon="inline-start" />
+                  {t(editing ? "openings.cancel" : "openings.edit")}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {editing && base && canEdit ? (
+              <OpeningForm
+                key={editing.revision}
+                base={base}
+                initial={editing}
+                onCreated={() => {
+                  setEditing(null);
+                  void refresh();
+                }}
+              />
+            ) : (
+              <div className="flex flex-col gap-5">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {opening.job_description}
+                </p>
+                {opening.details?.candidate_requirements && (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold">
+                      {t("design.requirements")}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {opening.details.candidate_requirements
+                        .split(/\n|;/)
+                        .filter((value) => value.trim())
+                        .map((value, index) => (
+                          <span
+                            key={index}
+                            className="rounded-full border bg-muted/50 px-3 py-1 text-xs"
+                          >
+                            {value.trim()}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {editing && base && canEdit ? (
-            <OpeningForm
-              key={editing.revision}
-              base={base}
-              initial={editing}
-              onCreated={() => {
-                setEditing(null);
-                void refresh();
-              }}
-            />
-          ) : (
-            <div className="flex flex-col gap-5">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {opening.job_description}
-              </p>
+          </CardContent>
+        </Card>
+        {!editing && details.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("design.jobDetails")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {" "}
               {details.length > 0 && (
                 <dl className="grid gap-4 sm:grid-cols-2">
                   {details.map(([name, value]) => (
@@ -218,6 +295,21 @@ export function OpeningSetup({ opening }: { opening: Opening }) {
                   ))}
                 </dl>
               )}
+            </CardContent>
+          </Card>
+        )}
+        {!editing && (opening.questions ?? []).length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap justify-between gap-2">
+                <CardTitle>{t("design.questions")}</CardTitle>
+                <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                  {t("design.questionsHint")}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {" "}
               {(opening.questions ?? []).length > 0 && (
                 <div>
                   <h3 className="mb-2 text-sm font-medium">
@@ -232,88 +324,91 @@ export function OpeningSetup({ opening }: { opening: Opening }) {
                   </ol>
                 </div>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("openings.setup.documents")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {(opening.documents ?? []).map((file) => (
-            <div
-              key={file.id}
-              className="flex flex-wrap items-center justify-between gap-2"
-            >
-              <a
-                className="inline-flex min-w-0 items-center gap-2 break-all text-sm underline"
-                href={`/api/recruitment${base}/openings/${opening.id}/documents/${file.id}/file`}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-col gap-5">
+        {sideContent}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("openings.setup.documents")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {(opening.documents ?? []).map((file) => (
+              <div
+                key={file.id}
+                className="flex flex-wrap items-center justify-between gap-2"
               >
-                <Download className="size-4 shrink-0" />
-                {file.file_name}
-              </a>
-              {canEdit && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => void remove(file.id)}
-                  aria-label={t("openings.removeDocument", {
-                    name: file.file_name,
-                  })}
+                <a
+                  className="inline-flex min-w-0 items-center gap-2 break-all text-sm underline"
+                  href={`/api/recruitment${base}/openings/${opening.id}/documents/${file.id}/file`}
                 >
-                  <Trash2 data-icon="inline-start" />
-                  {t("openings.setup.remove")}
-                </Button>
-              )}
-            </div>
-          ))}
-          {!opening.documents?.length && (
-            <p className="text-sm text-muted-foreground">
-              {t("openings.noDocuments")}
-            </p>
-          )}
-          {canEdit && base && opening.documents.length < 5 && (
-            <form method="post" onSubmit={upload}>
-              <fieldset disabled={busy}>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="additional-job-files">
-                      {t("openings.addDocuments")}
-                    </FieldLabel>
-                    <Input
-                      id="additional-job-files"
-                      name="files"
-                      type="file"
-                      multiple
-                      required
-                      accept=".pdf,.docx,.doc"
-                    />
-                    <FieldDescription>
-                      {t("openings.setup.fileLimits")}
-                    </FieldDescription>
-                  </Field>
+                  <Download className="size-4 shrink-0" />
+                  {file.file_name}
+                </a>
+                {canEdit && (
                   <Button
-                    type="submit"
-                    variant="outline"
-                    className="w-fit"
-                    loading={busy}
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => void remove(file.id)}
+                    aria-label={t("openings.removeDocument", {
+                      name: file.file_name,
+                    })}
                   >
-                    {t("openings.uploadDocuments")}
+                    <Trash2 data-icon="inline-start" />
+                    {t("openings.setup.remove")}
                   </Button>
-                </FieldGroup>
-              </fieldset>
-            </form>
-          )}
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+                )}
+              </div>
+            ))}
+            {!opening.documents?.length && (
+              <p className="text-sm text-muted-foreground">
+                {t("openings.noDocuments")}
+              </p>
+            )}
+            {canEdit && base && opening.documents.length < 5 && (
+              <form method="post" onSubmit={upload}>
+                <fieldset disabled={busy}>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="additional-job-files">
+                        {t("openings.addDocuments")}
+                      </FieldLabel>
+                      <Input
+                        id="additional-job-files"
+                        name="files"
+                        type="file"
+                        multiple
+                        required
+                        accept=".pdf,.docx,.doc"
+                      />
+                      <FieldDescription>
+                        {t("openings.setup.fileLimits")}
+                      </FieldDescription>
+                    </Field>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      className="w-fit"
+                      loading={busy}
+                    >
+                      {t("openings.uploadDocuments")}
+                    </Button>
+                  </FieldGroup>
+                </fieldset>
+              </form>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

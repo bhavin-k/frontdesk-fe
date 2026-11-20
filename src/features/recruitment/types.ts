@@ -46,7 +46,11 @@ export type Application = {
   status: string;
   version: number;
   latest_evaluation_id: string | null;
-  recruiter_decision: { decision: "shortlist" | "reject"; saved_at: string; recruiter_id: string } | null;
+  recruiter_decision: {
+    decision: "shortlist" | "reject";
+    saved_at: string;
+    recruiter_id: string;
+  } | null;
   retention_expires_at: string;
   profile: {
     name?: string | null;
@@ -54,6 +58,18 @@ export type Application = {
     phone?: string | null;
     mobile?: string | null;
     skills?: string[];
+    technologies?: string[];
+    languages?: string[];
+    education?: string[];
+    work_history?: {
+      company: string;
+      title: string;
+      years: number;
+      summary: string;
+    }[];
+    certifications?: string[];
+    summary?: string;
+    total_experience_years?: number;
   };
 };
 export type CVMatch = {
@@ -79,7 +95,11 @@ export type CVMatch = {
       credit: number;
       evidence: { path: string; quote: string } | null;
     }[];
-    additional_skills: { skill: string; related_to: string; evidence: { path: string; quote: string } }[];
+    additional_skills: {
+      skill: string;
+      related_to: string;
+      evidence: { path: string; quote: string };
+    }[];
   } | null;
 };
 export type LegacyMatch = {
@@ -102,11 +122,22 @@ export type RoleAssessment = {
   match_result: CVMatch | null;
 };
 export type Evaluation = {
-  id: string; resume_id: string; state: string; recommendation: string; reason: string;
-  confidence: number | null; recommended_assessment_id: string | null; processed_at: string | null;
-  processing_config: Record<string, unknown>; roles: RoleAssessment[];
+  id: string;
+  resume_id: string;
+  state: string;
+  recommendation: string;
+  reason: string;
+  confidence: number | null;
+  recommended_assessment_id: string | null;
+  processed_at: string | null;
+  processing_config: Record<string, unknown>;
+  roles: RoleAssessment[];
 };
-export type MatchResponse = { status: string; result: Match | null; evaluation: Evaluation | null };
+export type MatchResponse = {
+  status: string;
+  result: Match | null;
+  evaluation: Evaluation | null;
+};
 export type Retention = {
   rejected_retention_days: number;
   other_candidate_retention_days: number;

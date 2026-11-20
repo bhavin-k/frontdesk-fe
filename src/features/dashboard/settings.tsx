@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -84,6 +85,7 @@ export function TeamSettingsPage() {
   const { t } = useTranslation("dashboard");
   const { base, userId } = useBusiness();
   const query = useQueryClient();
+  const retention = useResource<Retention>("/retention-settings");
   const members = useResource<Member[]>("/members");
   const [remove, setRemove] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -128,84 +130,125 @@ export function TeamSettingsPage() {
     }
   }
   return (
-    <SectionBlock
-      title={t("settings.team")}
-      description={t("settings.teamDescription")}
-    >
-      {(error || members.error) && (
-        <ErrorNotice error={(error || members.error)!} />
-      )}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings.add")}</CardTitle>
-          <CardDescription>{t("settings.registeredHint")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={add}>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="member-id">
-                  {t("settings.memberId")}
-                </FieldLabel>
-                <Input
-                  id="member-id"
-                  name="member"
-                  required
-                  pattern="[0-9a-fA-F-]{36}"
-                  disabled={busy}
-                />
-                <FieldDescription>
-                  {t("settings.yourId")}:{" "}
-                  <code className="break-all">{userId}</code>
-                </FieldDescription>
-              </Field>
-              <Button className="w-fit" type="submit" loading={busy}>
-                <Plus data-icon="inline-start" />
-                {t("settings.add")}
-              </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-      {members.isPending ? (
-        <TableCardSkeleton columns={3} />
-      ) : (
-        <TableCard>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("settings.memberId")}</TableHead>
-                <TableHead>{t("settings.role")}</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.data?.map((member) => (
-                <TableRow key={member.user_id}>
-                  <TableCell className="font-mono text-xs">
-                    {member.user_id}
-                    {member.user_id === userId && (
-                      <span className="ml-2 font-sans text-muted-foreground">
-                        {t("settings.you")}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>{t("workspace.role")}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy || members.data.length <= 1}
-                      onClick={() => setRemove(member.user_id)}
-                    >
-                      {t("settings.remove")}
-                    </Button>
-                  </TableCell>
+    <div className="flex flex-col gap-6">
+      <section className="rounded-[20px] border bg-card p-6">
+        <h2 className="text-xl font-semibold">{t("settings.team")}</h2>
+        <p className="mt-1 mb-5 text-sm text-muted-foreground">
+          {t("settings.teamDescription")}
+        </p>
+        {(error || members.error) && (
+          <ErrorNotice error={(error || members.error)!} />
+        )}
+        <Card className="mb-5 border-0 bg-muted/40">
+          <CardHeader>
+            <CardTitle>{t("settings.add")}</CardTitle>
+            <CardDescription>{t("settings.registeredHint")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={add}>
+              <FieldGroup className="gap-3 sm:flex-row sm:items-end">
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="member-id">
+                    {t("settings.memberId")}
+                  </FieldLabel>
+                  <Input
+                    id="member-id"
+                    name="member"
+                    required
+                    pattern="[0-9a-fA-F-]{36}"
+                    disabled={busy}
+                  />
+                  <FieldDescription>
+                    {t("settings.yourId")}:{" "}
+                    <code className="break-all">{userId}</code>
+                  </FieldDescription>
+                </Field>
+                <Button className="w-fit" type="submit" loading={busy}>
+                  <Plus data-icon="inline-start" />
+                  {t("settings.add")}
+                </Button>
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
+        {members.isPending ? (
+          <TableCardSkeleton columns={3} />
+        ) : (
+          <TableCard className="border-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("settings.memberId")}</TableHead>
+                  <TableHead>{t("settings.role")}</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableCard>
+              </TableHeader>
+              <TableBody>
+                {members.data?.map((member) => (
+                  <TableRow key={member.user_id}>
+                    <TableCell className="font-mono text-xs">
+                      {member.user_id}
+                      {member.user_id === userId && (
+                        <span className="ml-2 font-sans text-muted-foreground">
+                          {t("settings.you")}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{t("workspace.role")}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || members.data.length <= 1}
+                        onClick={() => setRemove(member.user_id)}
+                      >
+                        {t("settings.remove")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableCard>
+        )}
+      </section>
+      {retention.error && <ErrorNotice error={retention.error} />}
+      {retention.data && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>{t("design.retentionGlance")}</CardTitle>
+              <Link
+                href="/dashboard/settings/retention"
+                className="text-sm font-medium underline"
+              >
+                {t("design.editPeriods")}
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-5 sm:grid-cols-2">
+            <div className="p-3">
+              <p className="mb-2 text-sm font-medium">
+                {t("settings.rejectedDays")}
+              </p>
+              <p className="text-2xl font-semibold">
+                {t("design.days", {
+                  count: retention.data.rejected_retention_days,
+                })}
+              </p>
+            </div>
+            <div className="rounded-xl bg-muted/40 p-3">
+              <p className="mb-2 text-sm font-medium">
+                {t("settings.otherDays")}
+              </p>
+              <p className="text-2xl font-semibold">
+                {t("design.days", {
+                  count: retention.data.other_candidate_retention_days,
+                })}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
       <ConfirmActionDialog
         open={!!remove}
@@ -220,7 +263,7 @@ export function TeamSettingsPage() {
         pending={busy}
         onConfirm={confirmRemove}
       />
-    </SectionBlock>
+    </div>
   );
 }
 

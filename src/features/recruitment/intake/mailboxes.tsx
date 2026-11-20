@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
+import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import copy from "../../../../public/locales/en/intake.json";
 import { Button } from "@/components/ui/button";
@@ -56,6 +58,7 @@ function MailboxCard({
   base: string;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation("dashboard");
   const [configuring, setConfiguring] = useState(
     row.enabled && row.status === "needs_configuration",
   );
@@ -143,12 +146,17 @@ function MailboxCard({
   const active = row.enabled && row.status === "connected";
   return (
     <div
-      className="mt-6 flex flex-col gap-4 border-t pt-6"
+      className="flex flex-col gap-4 rounded-[20px] border bg-card p-6"
       data-testid="mailbox-card"
       data-mailbox-id={row.id}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-medium">{row.email ?? row.provider}</h3>
+        <h3 className="flex items-center gap-3 text-base font-semibold">
+          <span className="rounded-xl bg-muted p-3">
+            <Mail className="size-5" />
+          </span>
+          {row.email ?? row.provider}
+        </h3>
         <StatusBadge value={row.enabled ? row.status : "disabled"} />
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -157,20 +165,41 @@ function MailboxCard({
         </span>
         {row.enabled && <StatusBadge value={row.sync_status} />}
       </div>
-      <p className="text-sm">
-        {row.intake_started_at ? (
-          <>
-            {copy.cutoff}: <time>{displayTime(row.intake_started_at)}</time>
-          </>
-        ) : (
-          copy.notStarted
-        )}
-      </p>
-      {row.last_success_at && (
-        <p className="text-xs text-muted-foreground">
-          {copy.lastSync}: {displayTime(row.last_success_at)}
-        </p>
-      )}
+      <dl className="grid gap-5 rounded-2xl bg-muted/50 p-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <dt className="mb-1 text-sm text-muted-foreground">
+            {t("design.sourceFolder")}
+          </dt>
+          <dd className="break-all text-sm font-medium">
+            {row.folder_id || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="mb-1 text-sm text-muted-foreground">
+            {t("design.sendsCVsTo")}
+          </dt>
+          <dd className="text-sm font-medium">
+            {openingOptions.find((item) => item.id === row.opening_id)?.title ??
+              row.opening_id}
+          </dd>
+        </div>
+        <div>
+          <dt className="mb-1 text-sm text-muted-foreground">{copy.cutoff}</dt>
+          <dd className="text-sm font-medium">
+            {row.intake_started_at
+              ? displayTime(row.intake_started_at)
+              : copy.notStarted}
+          </dd>
+        </div>
+        <div>
+          <dt className="mb-1 text-sm text-muted-foreground">
+            {copy.lastSync}
+          </dt>
+          <dd className="text-sm font-medium">
+            {row.last_success_at ? displayTime(row.last_success_at) : "—"}
+          </dd>
+        </div>
+      </dl>
       {row.stalled && (
         <Alert>
           <AlertDescription>{copy.stalled}</AlertDescription>
@@ -328,6 +357,7 @@ export function Mailboxes({
   capabilities: Capabilities;
   onChanged: () => void;
 }) {
+  const { t } = useTranslation("dashboard");
   const [selectedOpening, setSelectedOpening] = useState("");
   const chosenOpening = openingOptions.some(
     (opening) => opening.id === selectedOpening,
@@ -341,7 +371,9 @@ export function Mailboxes({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showImap, setShowImap] = useState(false);
-  const unconfigured = capabilities.items.filter((provider) => !provider.configured);
+  const unconfigured = capabilities.items.filter(
+    (provider) => !provider.configured,
+  );
   async function connect(provider: string) {
     setBusy(true);
     setError("");
@@ -358,102 +390,112 @@ export function Mailboxes({
     }
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{copy.mailboxes}</CardTitle>
-        <CardDescription>{copy.connectionHelp}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {capabilities.provider_mode === "fake" && (
-          <Alert>
-            <AlertDescription>{copy.fakeNotice}</AlertDescription>
-          </Alert>
-        )}
-        {openingOptions.length > 1 && (
-          <Field>
-            <FieldLabel htmlFor="connect-opening">{copy.opening}</FieldLabel>
-            <NativeSelect
-              id="connect-opening"
-              value={selectedOpening}
-              onChange={(event) => setSelectedOpening(event.target.value)}
-            >
-              <NativeSelectOption value="">
-                {copy.chooseOpening}
-              </NativeSelectOption>
-              {openingOptions.map((opening) => (
-                <NativeSelectOption key={opening.id} value={opening.id}>
-                  {opening.title}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
-        )}
-        {!chosenOpening && (
-          <p className="text-sm text-muted-foreground">
-            {copy.openingRequired}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {capabilities.items.map((provider) => (
-            <Button
-              key={provider.connection_method}
-              variant="outline"
-              disabled={!chosenOpening || busy || !provider.configured}
-              title={!provider.configured ? copy.providerSetup : undefined}
-              onClick={() =>
-                provider.connection_method === "imap"
-                  ? setShowImap(!showImap)
-                  : connect(provider.id)
-              }
-            >
-              {methodLabel(provider.connection_method)}
-            </Button>
-          ))}
-        </div>
-        {showImap &&
-          chosenOpening &&
-          capabilities.items.some(
-            (provider) =>
-              provider.connection_method === "imap" && provider.configured,
-          ) && (
-            <ImapConnectForm
-              base={base}
-              openingId={chosenOpening}
-              rows={rows}
-              onChanged={onChanged}
-              onDone={() => {
-                setShowImap(false);
-                onChanged();
-              }}
-              onCancel={() => setShowImap(false)}
-            />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xl font-semibold">{copy.mailboxes}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {copy.connectionHelp}
+        </p>
+      </div>
+      {rows.map((row) => (
+        <MailboxCard
+          key={row.id}
+          row={row}
+          openingOptions={openingOptions}
+          base={base}
+          onChanged={onChanged}
+        />
+      ))}
+      <Card className="border-dashed bg-card/40">
+        <CardHeader>
+          <CardTitle>{t("design.addInbox")}</CardTitle>
+          <CardDescription>{t("design.inboxHint")}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {capabilities.provider_mode === "fake" && (
+            <Alert>
+              <AlertDescription>{copy.fakeNotice}</AlertDescription>
+            </Alert>
           )}
-        {capabilities.items.length === 0 && (
-          <p className="text-sm text-muted-foreground">{copy.noMethods}</p>
-        )}
-        {unconfigured.length > 0 && (
-          <p className="text-sm text-muted-foreground">
-            {copy.providerSetupMethods.replace(
-              "{methods}",
-              unconfigured.map((provider) => methodLabel(provider.connection_method)).join(", "),
+          {openingOptions.length > 1 && (
+            <Field>
+              <FieldLabel htmlFor="connect-opening">{copy.opening}</FieldLabel>
+              <NativeSelect
+                id="connect-opening"
+                value={selectedOpening}
+                onChange={(event) => setSelectedOpening(event.target.value)}
+              >
+                <NativeSelectOption value="">
+                  {copy.chooseOpening}
+                </NativeSelectOption>
+                {openingOptions.map((opening) => (
+                  <NativeSelectOption key={opening.id} value={opening.id}>
+                    {opening.title}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+          )}
+          {!chosenOpening && (
+            <p className="text-sm text-muted-foreground">
+              {copy.openingRequired}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {capabilities.items.map((provider) => (
+              <Button
+                key={provider.connection_method}
+                variant="outline"
+                disabled={!chosenOpening || busy || !provider.configured}
+                title={!provider.configured ? copy.providerSetup : undefined}
+                onClick={() =>
+                  provider.connection_method === "imap"
+                    ? setShowImap(!showImap)
+                    : connect(provider.id)
+                }
+              >
+                {methodLabel(provider.connection_method)}
+              </Button>
+            ))}
+          </div>
+          {showImap &&
+            chosenOpening &&
+            capabilities.items.some(
+              (provider) =>
+                provider.connection_method === "imap" && provider.configured,
+            ) && (
+              <ImapConnectForm
+                base={base}
+                openingId={chosenOpening}
+                rows={rows}
+                onChanged={onChanged}
+                onDone={() => {
+                  setShowImap(false);
+                  onChanged();
+                }}
+                onCancel={() => setShowImap(false)}
+              />
             )}
-          </p>
-        )}
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {rows.map((row) => (
-          <MailboxCard
-            key={row.id}
-            row={row}
-            openingOptions={openingOptions}
-            base={base}
-            onChanged={onChanged}
-          />
-        ))}
-      </CardContent>
-    </Card>
+          {capabilities.items.length === 0 && (
+            <p className="text-sm text-muted-foreground">{copy.noMethods}</p>
+          )}
+          {unconfigured.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {copy.providerSetupMethods.replace(
+                "{methods}",
+                unconfigured
+                  .map((provider) => methodLabel(provider.connection_method))
+                  .join(", "),
+              )}
+            </p>
+          )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

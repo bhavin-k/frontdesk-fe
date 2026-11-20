@@ -28,13 +28,25 @@ export function WorkspaceSwitcher() {
             render={
               <SidebarMenuButton
                 size="lg"
+                className="rounded-xl border bg-muted/40"
                 aria-label={t("workspace.switch")}
                 data-testid="business-switcher"
               />
             }
           >
-            <div className="flex size-8 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
-              <BriefcaseBusiness className="size-4" />
+            <div className="flex size-8 items-center justify-center rounded-xl bg-neutral text-white">
+              {state.business?.name ? (
+                <span className="text-xs font-bold">
+                  {state.business.name
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((word) => word[0])
+                    .join("")
+                    .toUpperCase()}
+                </span>
+              ) : (
+                <BriefcaseBusiness className="size-4" />
+              )}
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">

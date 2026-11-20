@@ -63,7 +63,12 @@ export function NavUser({ user }: { user: { name: string; email: string } }) {
           >
             <Avatar className="size-8">
               <AvatarFallback>
-                {(user.name || user.email).slice(0, 1).toUpperCase()}
+                {(user.name || user.email)
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((word) => word[0])
+                  .join("")
+                  .toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
@@ -81,10 +86,12 @@ export function NavUser({ user }: { user: { name: string; email: string } }) {
             sideOffset={4}
           >
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => {
-                setOpenMobile(false);
-                router.push("/dashboard/settings/account");
-              }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setOpenMobile(false);
+                  router.push("/dashboard/settings/account");
+                }}
+              >
                 <UserRound />
                 {t("account.account")}
               </DropdownMenuItem>

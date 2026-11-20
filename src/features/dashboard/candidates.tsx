@@ -6,9 +6,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import { api, candidatePagePath, displayTime, isProcessing } from "@/features/recruitment/api";
+import {
+  api,
+  candidatePagePath,
+  displayTime,
+  isProcessing,
+} from "@/features/recruitment/api";
 import type { Page, Upload } from "@/features/recruitment/types";
-import type { Candidate, CandidateSummary, Resume } from "@/features/recruitment/intake/types";
+import type {
+  Candidate,
+  CandidateSummary,
+  Resume,
+} from "@/features/recruitment/intake/types";
 import { ApplicationReview } from "@/features/recruitment/application-review";
 import { CandidateContactDetails } from "@/features/recruitment/candidate-contact-details";
 import { useBusiness } from "./business-context";
@@ -101,7 +110,7 @@ export function CandidatesPage() {
                     <TableCell className="tabular-nums">
                       {candidate.score === null
                         ? t("candidates.noScore")
-                        : `${candidate.score}%`}
+                        : `${candidate.score}/100`}
                     </TableCell>
                     <TableCell>
                       <StatusBadge value={candidate.status} />
@@ -194,7 +203,9 @@ function CandidateContactCard({ candidate }: { candidate: Candidate }) {
               <FieldGroup>
                 {(["name", "email", "mobile"] as const).map((field) => (
                   <Field key={field}>
-                    <FieldLabel htmlFor={`contact-${field}`}>{t(field)}</FieldLabel>
+                    <FieldLabel htmlFor={`contact-${field}`}>
+                      {t(field)}
+                    </FieldLabel>
                     <Input
                       id={`contact-${field}`}
                       name={field}
@@ -210,14 +221,17 @@ function CandidateContactCard({ candidate }: { candidate: Candidate }) {
                       }
                       defaultValue={
                         (field === "mobile"
-                          ? candidate.profile.phone ?? candidate.profile.mobile
+                          ? (candidate.profile.phone ??
+                            candidate.profile.mobile)
                           : candidate.profile[field]) ?? ""
                       }
                     />
                   </Field>
                 ))}
                 <Field>
-                  <FieldLabel htmlFor="contact-reason">{t("reason")}</FieldLabel>
+                  <FieldLabel htmlFor="contact-reason">
+                    {t("reason")}
+                  </FieldLabel>
                   <Textarea
                     id="contact-reason"
                     name="reason"
@@ -270,7 +284,7 @@ function CurrentMatch({ uploadId }: { uploadId: string }) {
   const query = useQueryClient();
   const [refresh, setRefresh] = useState(0);
   const upload = useResource<Upload>(`/cv-uploads/${uploadId}`, {
-    poll: data => !data || isProcessing(data.status),
+    poll: (data) => !data || isProcessing(data.status),
   });
   if (upload.error) return <ErrorNotice error={upload.error} />;
   if (!upload.data || !base) return <TableCardSkeleton />;
@@ -328,7 +342,7 @@ export function CandidateDetailPage({ id }: { id: string }) {
                 {t("candidates.resumes")}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="match" className="max-w-4xl">
+            <TabsContent value="match">
               {person.data.latest_upload_id ? (
                 <CurrentMatch uploadId={person.data.latest_upload_id} />
               ) : (

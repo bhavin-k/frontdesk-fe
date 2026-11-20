@@ -5,7 +5,14 @@ import { useTranslation } from "react-i18next";
 import { recruitmentCopy as copy } from "@/lib/copy";
 import { api, displayTime, isProcessing } from "./api";
 import { CandidateContactDetails } from "./candidate-contact-details";
-import type { Application, Match, MatchResponse, Upload, Evaluation } from "./types";
+import type {
+  Application,
+  Match,
+  MatchResponse,
+  Upload,
+  Evaluation,
+} from "./types";
+import { CVPreview } from "./cv-preview";
 import { DecisionForm } from "./decision-form";
 import { EvaluationSummary } from "./evaluation-summary";
 import { Button } from "@/components/ui/button";
@@ -20,11 +27,13 @@ export function ApplicationReview({
   upload,
   refresh,
   onSaved,
+  initialDecision,
 }: {
   base: string;
   upload: Upload;
   refresh: number;
   onSaved: () => void;
+  initialDecision?: "shortlist" | "reject";
 }) {
   const { t } = useTranslation("dashboard");
   const [detail, setDetail] = useState<{
@@ -50,7 +59,11 @@ export function ApplicationReview({
       ),
     ])
       .then(([application, result]) => {
-        setDetail({ application, match: result.result, evaluation: result.evaluation });
+        setDetail({
+          application,
+          match: result.result,
+          evaluation: result.evaluation,
+        });
         setError("");
       })
       .catch((cause: Error) => {
@@ -62,11 +75,14 @@ export function ApplicationReview({
   const evaluation = detail?.evaluation ?? null;
   const selectedRole =
     evaluation?.roles.find((role) => role.id === assessmentId) ??
-    evaluation?.roles.find((role) => role.id === evaluation.recommended_assessment_id) ??
+    evaluation?.roles.find(
+      (role) => role.id === evaluation.recommended_assessment_id,
+    ) ??
     evaluation?.roles[0] ??
     null;
   const match = detail?.match;
-  const legacyMatch = !evaluation && match && "match_run_id" in match ? match : null;
+  const legacyMatch =
+    !evaluation && match && "match_run_id" in match ? match : null;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -122,79 +138,114 @@ export function ApplicationReview({
         <TableCardSkeleton columns={3} />
       )}
       {detail && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>{copy.profile}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <h2 className="text-lg font-medium">
-                {detail.application.profile.name || copy.unknownName}
-              </h2>
-              <CandidateContactDetails profile={detail.application.profile} />
-              {detail.application.candidate_id && (
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  size="sm"
-                  className="w-fit"
-                  render={
-                    <Link
-                      href={`/dashboard/candidates/${detail.application.candidate_id}`}
-                    />
-                  }
-                >
-                  {t("candidates.view")}
-                </Button>
-              )}
-              {evaluation && !detail.application.recruiter_decision
-                ? <p className="text-sm">{copy.awaitingDecision}</p>
-                : <StatusBadge value={detail.application.status} />}
-              {detail.application.recruiter_decision && <div className="flex flex-col gap-2">
-                <p className="text-sm">{copy.savedRecruiterDecision}</p>
-                <p>{detail.application.recruiter_decision.decision === "shortlist" ? copy.selectCandidate : copy.reject}</p>
-                <p className="text-xs text-muted-foreground">{displayTime(detail.application.recruiter_decision.saved_at)}</p>
-              </div>}
-            </CardContent>
-          </Card>
-          {evaluation && <EvaluationSummary evaluation={evaluation} selected={selectedRole} onSelect={setAssessmentId} />}
-          {legacyMatch && (
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <CVPreview
+            base={base}
+            uploadId={upload.upload_id}
+            application={detail.application}
+            assessment={selectedRole}
+          />
+          <div className="flex min-w-0 flex-col gap-5">
             <Card>
               <CardHeader>
-                <CardTitle>{copy.score}</CardTitle>
+                <CardTitle>{copy.profile}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                <p className="text-3xl font-semibold tabular-nums">
-                  {legacyMatch.score === null ? copy.noScore : legacyMatch.score + "/100"}
-                </p>
-                <StatusBadge value={legacyMatch.recommendation} />
-                <p>{legacyMatch.reason}</p>
+                <h2 className="text-lg font-medium">
+                  {detail.application.profile.name || copy.unknownName}
+                </h2>
+                <CandidateContactDetails profile={detail.application.profile} />
+                {detail.application.candidate_id && (
+                  <Button
+                    nativeButton={false}
+                    variant="outline"
+                    size="sm"
+                    className="w-fit"
+                    render={
+                      <Link
+                        href={`/dashboard/candidates/${detail.application.candidate_id}`}
+                      />
+                    }
+                  >
+                    {t("candidates.view")}
+                  </Button>
+                )}
+                {evaluation && !detail.application.recruiter_decision ? (
+                  <p className="text-sm">{copy.awaitingDecision}</p>
+                ) : (
+                  <StatusBadge value={detail.application.status} />
+                )}
+                {detail.application.recruiter_decision && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm">{copy.savedRecruiterDecision}</p>
+                    <p>
+                      {detail.application.recruiter_decision.decision ===
+                      "shortlist"
+                        ? copy.selectCandidate
+                        : copy.reject}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {displayTime(
+                        detail.application.recruiter_decision.saved_at,
+                      )}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {copy.retention}:{" "}
-            {displayTime(detail.application.retention_expires_at)}
-          </p>
-          <Separator />
-          {detail.application.status === "rejected" ? (
-            <Alert>
-              <AlertDescription>{copy.rejected}</AlertDescription>
-            </Alert>
-          ) : (
-            (evaluation || legacyMatch) && (
-              <DecisionForm
-                key={`${detail.application.id}:${evaluation?.id ?? legacyMatch?.match_run_id}:${detail.application.version}`}
-                base={base}
-                application={detail.application}
-                match={legacyMatch}
+            {evaluation && (
+              <EvaluationSummary
                 evaluation={evaluation}
-                assessmentId={selectedRole?.id ?? null}
-                onSaved={onSaved}
+                selected={selectedRole}
+                onSelect={setAssessmentId}
               />
-            )
-          )}
-        </>
+            )}
+            {legacyMatch && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{copy.score}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <p className="text-3xl font-semibold tabular-nums">
+                    {legacyMatch.score === null
+                      ? copy.noScore
+                      : legacyMatch.score + "/100"}
+                  </p>
+                  <StatusBadge value={legacyMatch.recommendation} />
+                  <p>{legacyMatch.reason}</p>
+                </CardContent>
+              </Card>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {copy.retention}:{" "}
+              {displayTime(detail.application.retention_expires_at)}
+            </p>
+            <Separator />
+            {detail.application.status === "rejected" ? (
+              <Alert>
+                <AlertDescription>{copy.rejected}</AlertDescription>
+              </Alert>
+            ) : (
+              (evaluation || legacyMatch) && (
+                <div className="rounded-[20px] border border-foreground bg-card p-6">
+                  <h2 className="mb-4 text-lg font-semibold">
+                    {t("design.reviewDecision")}
+                  </h2>
+                  <DecisionForm
+                    initialDecision={initialDecision}
+                    key={`${detail.application.id}:${evaluation?.id ?? legacyMatch?.match_run_id}:${detail.application.version}`}
+                    base={base}
+                    application={detail.application}
+                    match={legacyMatch}
+                    evaluation={evaluation}
+                    assessmentId={selectedRole?.id ?? null}
+                    onSaved={onSaved}
+                  />
+                </div>
+              )
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

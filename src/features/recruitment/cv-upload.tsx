@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
+import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { recruitmentCopy as copy } from "@/lib/copy";
 import { apiWithStatus } from "./api";
@@ -19,15 +21,18 @@ export function CVUpload({
   openingId: string;
   onUploaded: (upload: Upload, duplicate: boolean) => void;
 }) {
+  const { t } = useTranslation("dashboard");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const key = useRef<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
 
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
     const file = data.get("file") as File;
+    if (!file || !file.size) return;
     if (file.size > 10 * 1024 * 1024) {
       setError(copy.fileTooLarge);
       return;
@@ -58,9 +63,33 @@ export function CVUpload({
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
         <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="cv-file">{copy.cvFile}</FieldLabel>
+          <Field
+            className="rounded-2xl border border-dashed bg-muted/20 p-5"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (busy || !input.current || !event.dataTransfer.files.length)
+                return;
+              const transfer = new DataTransfer();
+              transfer.items.add(event.dataTransfer.files[0]);
+              input.current.files = transfer.files;
+              key.current = null;
+              setError("");
+            }}
+          >
+            <FieldLabel
+              htmlFor="cv-file"
+              className="flex cursor-pointer flex-col items-center gap-3 py-4 text-center"
+            >
+              <FileUp className="size-10 text-muted-foreground" />
+              <span>{t("design.dropCV")}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {t("design.fileHint")}
+              </span>
+              <span className="sr-only">{copy.cvFile}</span>
+            </FieldLabel>
             <Input
+              ref={input}
               id="cv-file"
               name="file"
               type="file"

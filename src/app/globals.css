@@ -38,3 +38,63 @@
 .border-teal-100 {
   border-color: var(--border) !important;
 }
+
+/* Frontdesk dashboard reference: quiet neutral surfaces and generous spacing. */
+.frontdesk-dashboard [data-slot="card"],
+.frontdesk-dashboard [data-slot="table-card"] {
+  border-radius: 20px;
+  box-shadow: none;
+}
+.frontdesk-dashboard [data-slot="sidebar-content"] {
+  gap: 10px;
+}
+.frontdesk-dashboard [data-slot="table-head"] {
+  font-size: 13px;
+  font-weight: 400;
+}
+.frontdesk-dashboard [data-slot="table-cell"] {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.frontdesk-dashboard [data-slot="sidebar-menu-button"] {
+  font-size: 14px;
+}
+.frontdesk-dashboard [data-slot="sidebar-menu-button"][data-active] {
+  background: var(--sidebar-primary);
+  color: var(--sidebar-primary-foreground);
+}
+.frontdesk-dashboard [data-slot="card-description"] {
+  line-height: 1.65;
+}
+.frontdesk-dashboard .type-page-title {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.frontdesk-dashboard .type-section-description {
+  font-size: 16px;
+  line-height: 1.5;
+}
+@media (max-width: 767px) {
+  .frontdesk-dashboard .type-page-title {
+    font-size: 26px;
+  }
+  .frontdesk-dashboard [data-slot="table-cell"] {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+}
+
+.frontdesk-dashboard [data-slot="input"],
+.frontdesk-dashboard [data-slot="native-select"],
+.frontdesk-dashboard [data-slot="textarea"] {
+  border-radius: 10px;
+  background-color: var(--card);
+}
+.frontdesk-dashboard [data-slot="input"],
+.frontdesk-dashboard [data-slot="native-select"] {
+  min-height: 40px;
+}
+.frontdesk-dashboard [data-slot="native-select-wrapper"]:has(#assessed-role) {
+  width: 100%;
+}
